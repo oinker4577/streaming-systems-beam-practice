@@ -9,6 +9,7 @@ import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
+import org.joda.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +23,8 @@ public class RawGrouping {
     public void processElement(@Element String element,
                                OutputReceiver<KV<String, Long>> receiver) {
       String[] record = element.split(",", -1);
-      receiver.output(KV.of(record[1], Long.valueOf(record[2])));
+      receiver.outputWithTimestamp(KV.of(record[1], Long.valueOf(record[2])),
+          Instant.parse(record[3]));
     }
   }
 
@@ -44,9 +46,10 @@ public class RawGrouping {
         .apply(ParDo.of(new DoFn<KV<String, Long>, Void>() {
           @ProcessElement
           public void processElement(ProcessContext c)  {
-            logger.info("key: {}, value: {}",
+            logger.info("key: {}, value: {}, timestamp: {}",
                 c.element().getKey(),
-                c.element().getValue());
+                c.element().getValue(),
+                c.timestamp());
           }
         }));
     pipeline.run();
